@@ -45,7 +45,7 @@ public class ApiService {
         }
     }
 
-    private String createCollection(String collectionJson) {
+    String createCollection(String collectionJson) {
         String url = apiProperties.getBaseUrl() + "/collections";
 
         HttpHeaders headers = new HttpHeaders();
@@ -78,7 +78,7 @@ public class ApiService {
         }
     }
 
-    private String generateOpenApiSpec(String collectionUid) {
+    public String generateOpenApiSpec(String collectionUid) {
         String url = apiProperties.getBaseUrl() + "/collections/" + collectionUid + "/transformations";
 
         HttpHeaders headers = new HttpHeaders();
@@ -97,9 +97,16 @@ public class ApiService {
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
             try {
                 JsonNode root = objectMapper.readTree(responseEntity.getBody());
+                if (!root.has("output") || !root.path("output").isTextual()) {
+                    throw new ApiException("OpenAPI specification 'output' field is missing or not text in the response from generation service.",
+                            HttpStatus.INTERNAL_SERVER_ERROR);
+                }
                 String openApiSpec = root.path("output").asText();
                 return openApiSpec;
             } catch (Exception e) {
+                if (e instanceof ApiException) {
+                    throw (ApiException) e;
+                }
                 throw new ApiException("Error parsing response: " + e.getMessage(),
                         e, HttpStatus.INTERNAL_SERVER_ERROR);
             }
@@ -111,7 +118,7 @@ public class ApiService {
         }
     }
 
-    private void deleteCollection(String collectionUid) {
+    void deleteCollection(String collectionUid) {
         String url = apiProperties.getBaseUrl() + "/collections/" + collectionUid;
 
         HttpHeaders headers = new HttpHeaders();
